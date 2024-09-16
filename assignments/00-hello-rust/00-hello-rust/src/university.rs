@@ -12,7 +12,7 @@ struct Student {
     gpa: f32,
 }
 
-const OLIN_STUDENTS: [Student; 5] = [
+const OLIN_STUDENTS: [Student; 8] = [
     Student {
         name: "Alice",
         class_year: ClassYear::Senior,
@@ -38,13 +38,74 @@ const OLIN_STUDENTS: [Student; 5] = [
         class_year: ClassYear::Senior,
         gpa: 0.0,
     },
+    Student {
+        name: "Anna",
+        class_year: ClassYear::FirstYear,
+        gpa: 4.0,
+    },
+    Student {
+        name: "Hanna",
+        class_year: ClassYear::FirstYear,
+        gpa: 4.0,
+    },
+    Student {
+        name: "Lorin",
+        class_year: ClassYear::Junior,
+        gpa: 3.6,
+    },
 ];
 
-fn get_average_gpa() -> f32 {}
+fn get_average_gpa() -> f32 {
+    let mut gpa_tot: f32 = 0.0;
+    let mut stud_count = 0;
+    for student_iter in OLIN_STUDENTS {
+        if student_iter.class_year == ClassYear::FirstYear {
+            continue;
+        }
+        stud_count += 1;
+        gpa_tot += student_iter.gpa;
+    }
+    let float_div = stud_count as f32;
+    gpa_tot / float_div
+}
 
-fn get_num_excel_students_for_class(class_year: ClassYear) -> u32 {}
+fn get_num_excel_students_for_class(class_year: ClassYear) -> u32 {
+    let mut num_accel: u32 = 0;
+    let avg_olin = get_average_gpa();
 
-fn get_best_class() -> ClassYear {}
+    for student_iter in OLIN_STUDENTS {
+        if student_iter.class_year != class_year {
+            continue;
+        }
+        if student_iter.gpa > avg_olin {
+            num_accel += 1;
+        }
+    }
+    num_accel
+}
+
+fn get_best_class() -> ClassYear {
+    let mut best_class: ClassYear = ClassYear::Senior;
+    let mut most_students: u32 = 0;
+
+    let mut iter_students: u32;
+
+    let years = [
+        ClassYear::Senior,
+        ClassYear::Junior,
+        ClassYear::Sophomore,
+        ClassYear::FirstYear,
+    ];
+
+    for class in years.iter() {
+        iter_students = get_num_excel_students_for_class(*class);
+        if most_students < iter_students {
+            most_students = iter_students;
+            best_class = *class;
+        }
+    }
+    best_class
+}
 
 // Do not modify below here
 #[cfg(test)]
