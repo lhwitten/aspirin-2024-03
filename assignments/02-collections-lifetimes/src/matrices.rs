@@ -6,18 +6,81 @@ pub enum MatrixError {
 }
 
 fn dot_product_prescriptive(vec1: &Vec<f64>, vec2: &Vec<f64>) -> Result<f64, MatrixError> {
-    todo!()
+    if vec1.is_empty() || vec2.is_empty() {
+        return Err(MatrixError::EmptyVector);
+    }
+
+    let length1 = vec1.len();
+    let length2 = vec2.len();
+
+    if length1 != length2 {
+        return Err(MatrixError::DimensionMismatch);
+    }
+
+    let mut accum: f64 = 0.0;
+    for i in 0..length1 {
+        accum += vec1[i] * vec2[i];
+    }
+
+    Ok(accum)
 }
 
 fn dot_product_functional(vec1: &Vec<f64>, vec2: &Vec<f64>) -> Result<f64, MatrixError> {
-    todo!()
+    if vec1.is_empty() || vec2.is_empty() {
+        return Err(MatrixError::EmptyVector);
+    }
+
+    let length1 = vec1.len();
+    let length2 = vec2.len();
+
+    if length1 != length2 {
+        return Err(MatrixError::DimensionMismatch);
+    }
+    Ok(vec1
+        .iter()
+        .zip(vec2.iter())
+        .fold(0.0, |acc, (&x1, &x2)| acc + (x1 * x2)))
 }
 
 fn multiply_matrices(
     vec1: &Vec<Vec<f64>>,
     vec2: &Vec<Vec<f64>>,
 ) -> Result<Vec<Vec<f64>>, MatrixError> {
-    todo!()
+    // Check if either matrix is empty
+    if vec1.is_empty() || vec2.is_empty() {
+        return Err(MatrixError::EmptyVector);
+    }
+
+    // Check if all rows in vec1 have the same number of columns (valid shape check)
+    let vec1_cols = vec1[0].len();
+    if !vec1.iter().all(|row| row.len() == vec1_cols) {
+        return Err(MatrixError::InvalidShape);
+    }
+
+    // Check if all rows in vec2 have the same number of columns (valid shape check)
+    let vec2_cols = vec2[0].len();
+    if !vec2.iter().all(|row| row.len() == vec2_cols) {
+        return Err(MatrixError::InvalidShape);
+    }
+
+    // Ensure that the number of columns in vec1 matches the number of rows in vec2
+    if vec1_cols != vec2.len() {
+        return Err(MatrixError::DimensionMismatch);
+    }
+
+    // Initialize result matrix
+    let mut result_vec: Vec<Vec<f64>> = vec![vec![0.0; vec2_cols]; vec1.len()];
+
+    // Perform matrix multiplication
+    for i in 0..vec1.len() {
+        for j in 0..vec2_cols {
+            for k in 0..vec1_cols {
+                result_vec[i][j] += vec1[i][k] * vec2[k][j];
+            }
+        }
+    }
+
+    Ok(result_vec)
 }
 
 #[cfg(test)]

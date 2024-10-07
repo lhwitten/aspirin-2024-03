@@ -1,19 +1,152 @@
-fn split_string(string: &str, delimeter: &str) -> Vec<&str> {
-    todo!()
+use std::{string, thread::current};
+
+fn split_string<'a>(string: &'a str, delimeter: &str) -> Vec<&'a str> {
+    //let mut new_vec: Vec<&str> = Vec::new();
+
+    string
+        .split(delimeter)
+        .filter(|string: &&str| !string.is_empty())
+        .collect()
 }
 
 #[derive(PartialEq, Debug)]
-struct Differences {
-    only_in_first: Vec<&str>,
-    only_in_second: Vec<&str>,
+struct Differences<'a, 'b> {
+    only_in_first: Vec<&'a str>,
+    only_in_second: Vec<&'b str>,
 }
 
-fn find_differences(first_string: &str, second_string: &str) -> Differences {
-    todo!()
+fn find_differences<'a, 'b>(first_string: &'a str, second_string: &'b str) -> Differences<'a, 'b> {
+    let first_vec = split_string(first_string, " ");
+
+    let second_vec = split_string(&second_string, " ");
+
+    let mut first_differences: Vec<&str> = Vec::new();
+
+    let mut second_differences: Vec<&str> = Vec::new();
+
+    'outer: for word in &first_vec {
+        for other_word in &second_vec {
+            if other_word.contains(word) {
+                continue 'outer;
+            }
+        }
+
+        first_differences.push(word);
+    }
+
+    'outer: for word in &second_vec {
+        for other_word in &first_vec {
+            if other_word.contains(word) {
+                continue 'outer;
+            }
+        }
+
+        second_differences.push(word);
+    }
+
+    Differences {
+        only_in_first: first_differences,
+        only_in_second: second_differences,
+    }
 }
 
-fn merge_names(first_name: &str, second_name: &str) -> String {
-    todo!()
+pub fn append_til_switch(mut to_append: String, copy_from: String) -> (String, i32) {
+    //returns the total string being appended so far
+    //as well as the number of characters copied over
+
+    let vowels = "aeiouAEIOU";
+
+    let mut first_char = true;
+    let mut count = 0;
+
+    for character in copy_from.chars() {
+        if vowels.contains(character) && !first_char {
+            break;
+        } else {
+            to_append.push(character);
+            first_char = false;
+        }
+        count += 1;
+    }
+    (to_append, count)
+}
+
+pub fn remove_first_amt(to_cut: String, num_cut: i32) -> String {
+    //to cut will always be available to cut a number
+
+    let mut new_str: String = String::new();
+
+    let mut string_iterator = to_cut.chars();
+
+    let mut incr = 0;
+
+    while let Some(character) = string_iterator.next() {
+        incr += 1;
+
+        if incr < num_cut + 1 {
+            continue;
+        }
+        new_str.push(character);
+    }
+
+    new_str
+}
+
+pub fn merge_names(first_name: &str, second_name: &str) -> String {
+    let mut string_buffer: String = String::new();
+    let mut dynamic_first: String = String::from(first_name);
+    let mut dynamic_second: String = String::from(second_name);
+
+    //will be either 1 or 2
+    let mut current_name = 1;
+    let mut to_cut: i32 = 0;
+
+    loop {
+        println!("string buffer is : {}", string_buffer);
+        println!("dynamic first is : {}", dynamic_first);
+        println!("dynamic second is : {}", dynamic_second);
+        match current_name {
+            1 => {
+                current_name = 2;
+
+                if dynamic_first == "" && dynamic_second == "" {
+                    current_name = 0;
+                } else if dynamic_first == "" {
+                    continue;
+                }
+
+                (string_buffer, to_cut) =
+                    append_til_switch(string_buffer.clone(), dynamic_first.clone());
+                dynamic_first = remove_first_amt(dynamic_first.clone(), to_cut);
+
+                // if dynamic_first.chars().count() == 1 && to_cut == 1 {
+                //     dynamic_first = String::from("");
+                // }
+            }
+            2 => {
+                current_name = 1;
+
+                if dynamic_first == "" && dynamic_second == "" {
+                    current_name = 0;
+                } else if dynamic_second == "" {
+                    continue;
+                }
+
+                (string_buffer, to_cut) =
+                    append_til_switch(string_buffer.clone(), dynamic_second.clone());
+                dynamic_second = remove_first_amt(dynamic_second.clone(), to_cut);
+
+                // if dynamic_second.chars().count() == 1 && to_cut == 1 {
+                //     dynamic_second = String::from("");
+                // }
+            }
+            _ => {
+                break;
+            }
+        }
+    }
+
+    string_buffer
 }
 
 #[cfg(test)]
