@@ -1,0 +1,10 @@
+total 36
+-rw-rw-r-- 1 lwitten lwitten 10524 Oct  7 13:31 Cargo.lock
+-rw-rw-r-- 1 lwitten lwitten   183 Oct  7 13:50 Cargo.toml
+-rw-rw-r-- 1 lwitten lwitten  5979 Oct  7 13:29 README.md
+-rw-rw-r-- 1 lwitten lwitten  3735 Oct  7 13:29 rubric.md
+drwxrwxr-x 2 lwitten lwitten  4096 Oct  8 16:31 src
+drwxrwxr-x 3 lwitten lwitten  4096 Oct  7 13:31 target
+-rw-rw-r-- 1 lwitten lwitten     0 Oct  8 22:00 words.txt
+
+ls -l | cargo run -- --help
