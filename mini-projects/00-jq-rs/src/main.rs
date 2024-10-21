@@ -8,6 +8,7 @@ use std::path::PathBuf;
 
 //mod input;
 mod filters;
+mod printers;
 
 // - `color-output` (True)
 // - `monochrome-output` (False)
@@ -30,7 +31,7 @@ struct Args {
     sort_keys: Option<bool>,
 
     #[clap(short, long)]
-    indent: Option<i32>,
+    indent: Option<usize>,
 
     filter_string: String,
 
@@ -46,12 +47,13 @@ fn main() {
     //let input_vec = input::read_general_input(args.file)?;
 
     //parse filter string
-    let mut filters: Vec<Filter> = Vec::new();
+    //let mut filters: Vec<Filter> = Vec::new();
     // let filters = parse_filters
 
     //test_valid_args(args)
+    let file_path = args.json_file.as_ref().expect("JSON file path is required");
 
-    let file = File::open(args.json_file).unwrap();
+    let file = File::open(file_path).unwrap();
     let reader = BufReader::new(file);
     let json_obj: serde_json::Value = serde_json::from_reader(reader).unwrap();
 
@@ -59,15 +61,39 @@ fn main() {
 
     // }
 
-    let operations = parse_operations(args.filter_string);
+    let filters = match filters::parse_filter_sequence(&args.filter_string) {
+        Ok(f) => f,
+        Err(e) => {
+            eprintln!("Error parsing filter: {}", e);
+            std::process::exit(1);
+        }
+    };
 
-    let mut filter_chain: Result<Vec<serde_json::Value>> = Result::new();
+    // Apply the filters
+    let initial_values = vec![json_obj];
+    let output_values = match filters::apply_filters(initial_values, &filters) {
+        Ok(values) => values,
+        Err(e) => {
+            eprintln!("Error applying filters: {}", e);
+            std::process::exit(1);
+        }
+    };
+    let monochrome_output = args.monochrome_output.unwrap_or(false);
+    let color_output = args.color_output.unwrap_or(true);
+    let indent: usize = args.indent.unwrap_or(2);
+    let sort_keys = args.sort_keys.unwrap_or(false);
+    let compact_output = args.compact_output.unwrap_or(false);
 
-    for operation in operations {
-        filter_chain = apply_operation(filter_chain, operation);
+    //Prepare the formatter
+    let formatter = printers::Formatter {
+        color_output: color_output && !monochrome_output,
+        indent,
+        compact: compact_output,
+        sort_keys,
+    };
+
+    //Print the output values
+    for value in output_values {
+        formatter.print_value(&value);
     }
-    //takes in Result<Vec<serde_json::Value>>
-    output_all(filter_chain)
-
-    //println!("{}", json_obj);
 }
