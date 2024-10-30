@@ -1,4 +1,4 @@
-use std::{fmt::Display, str::FromStr};
+use std::{fmt::Display, str::FromStr, string::ParseError};
 
 use crate::error::AspirinEatsError;
 
@@ -20,7 +20,30 @@ impl FromStr for HttpRequest {
 
     // Parse a string into an HTTP Request
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        todo!()
+        let body: Option<String> = match s.find("\r\n\r\n") {
+            Some(idx) => Some(String::from(&s[(idx + "\r\n\r\n".len())..])),
+            None => None,
+        };
+
+        let method: Option<String> = match s.find(" ") {
+            Some(idx) => Some(String::from(&s[..idx])),
+            None => None,
+        };
+
+        let remaining_substr = if let Some(ref method_str) = method {
+            &s[(method_str.len() + 1)..] // Slicing from after the method
+        } else {
+            s // If no method was found, remaining substring is unchanged
+        };
+
+        let path: Option<String> = match remaining_substr.find(" ") {
+            Some(idx) => Some(String::from(&remaining_substr[..idx])),
+            None => None,
+        };
+
+        let http_req = Ok(HttpRequest { method, path, body });
+
+        return http_req;
     }
 }
 
@@ -43,14 +66,30 @@ impl HttpResponse {
 impl Display for HttpResponse {
     /// Convert an HttpResponse struct to a valid HTTP Response
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        todo!()
+        write!(
+            f,
+            "HTTP/1.1 {} {}\r\n\r\n{}",
+            self.status_code, self.status_text, self.body
+        )
     }
 }
 
 impl From<AspirinEatsError> for HttpResponse {
     /// Given an error type, convert it to an appropriate HTTP Response
     fn from(value: AspirinEatsError) -> Self {
-        todo!()
+        match value {
+            AspirinEatsError::InvalidRequest => {
+                HttpResponse::new(400, "Bad Request", "Invalid Request")
+            }
+            AspirinEatsError::NotFound => HttpResponse::new(404, "Not Found", "Resource not found"),
+            AspirinEatsError::MethodNotAllowed => {
+                HttpResponse::new(405, "Method Not Allowed", "Method not allowed")
+            }
+            AspirinEatsError::Io(_) => {
+                HttpResponse::new(500, "Internal Server Error", "Internal Server Error")
+            }
+            _ => HttpResponse::new(500, "Unknown Error", "Unknown Error"),
+        }
     }
 }
 
