@@ -29,6 +29,9 @@ use usbd_serial::SerialPort;
 use core::fmt::Write;
 use heapless::String;
 
+//For ADC
+use embedded_hal_0_2::adc::OneShot;
+
 // Enum for Device State Machine
 #[repr(i32)]
 #[derive(Clone, Copy)]
@@ -68,10 +71,15 @@ fn main() -> ! {
     let mut green_led = pins.gpio16.into_push_pull_output();
 
     // Buttons
-    let mut left_button = pins.gpio13.into_pull_down_input();
-    let mut top_button = pins.gpio15.into_pull_down_input();
-    let mut bottom_button = pins.gpio14.into_pull_down_input();
-    let mut right_button = pins.gpio12.into_pull_down_input();
+    let mut ne_button = pins.gpio13.into_pull_down_input();
+    let mut se_button = pins.gpio15.into_pull_down_input();
+    let mut sw_button = pins.gpio14.into_pull_down_input();
+    let mut nw_button = pins.gpio12.into_pull_down_input();
+
+    let mut card_left_button = pins.gpio8.into_pull_down_input();
+    let mut card_top_button = pins.gpio9.into_pull_down_input();
+    let mut card_bottom_button = pins.gpio10.into_pull_down_input();
+    let mut card_right_button = pins.gpio11.into_pull_down_input();
 
     // Set up the watchdog driver - needed by the clock setup code
     let mut watchdog = hal::Watchdog::new(pac.WATCHDOG);
@@ -124,6 +132,11 @@ fn main() -> ! {
     let mut rsg_led_states = (PinState::Low, PinState::Low, PinState::Low);
     let mut in_debug_mode = false;
     let mut last_button_state_transmission_time: u64 = 0;
+
+    //potentiometer setup
+    let mut adc = hal::Adc::new(pac.ADC, &mut pac.RESETS);
+    // Configure GPIO26 as an ADC input
+    let mut adc_pin_0 = hal::adc::AdcPin::new(pins.gpio26).unwrap();
 
     loop {
         let current_time = timer.get_counter().ticks();
@@ -227,7 +240,7 @@ fn main() -> ! {
                 }
             }
         }
-        
+
         // Actions based on the current state
         match device_state {
             DeviceState::PendingInit => {}
@@ -243,34 +256,64 @@ fn main() -> ! {
                     .expect("GPIOs should never fail to change stated");
             }
             DeviceState::Running => {
+                //button handling
                 if current_time - last_button_state_transmission_time > SERIAL_TX_PERIOD {
                     last_button_state_transmission_time = current_time;
                     let mut button_text: String<20> = String::new();
-                    let button_data = (left_button
+                    let mut pot_text: String<20> = String::new();
+                    let button_data: u8 = (ne_button
                         .is_high()
                         .expect("GPIOs should never fail to read state")
                         as u8)
-                        + ((top_button
+                        + ((se_button
                             .is_high()
                             .expect("GPIOs should never fail to read state")
                             as u8)
                             << 1)
-                        + ((bottom_button
+                        + ((sw_button
                             .is_high()
                             .expect("GPIOs should never fail to read state")
                             as u8)
                             << 2)
-                        + ((right_button
+                        + ((nw_button
                             .is_high()
                             .expect("GPIOs should never fail to read state")
                             as u8)
-                            << 3);
+                            << 3)
+                        + ((card_top_button
+                            .is_high()
+                            .expect("GPIOs should never fail to read state")
+                            as u8)
+                            << 4)
+                        + ((card_bottom_button
+                            .is_high()
+                            .expect("GPIOs should never fail to read state")
+                            as u8)
+                            << 5)
+                        + ((card_left_button
+                            .is_high()
+                            .expect("GPIOs should never fail to read state")
+                            as u8)
+                            << 6)
+                        + ((card_right_button
+                            .is_high()
+                            .expect("GPIOs should never fail to read state")
+                            as u8)
+                            << 7);
+
                     writeln!(button_text, "{button_data}")
                         .expect("GPIOs should never fail to read state");
 
                     // Only possible error is when USB Buffer is full, which just means
                     // that this specific message will be dropped.
                     let _ = serial.write(button_text.as_bytes());
+
+                    let pin_adc_counts: u16 = adc.read(&mut adc_pin_0).unwrap();
+
+                    writeln!(pot_text, "{pin_adc_counts}")
+                        .expect("GPIOs should never fail to read state");
+
+                    let _ = serial.write(pot_text.as_bytes()); //TODO create pot_text
                     let _ = serial.flush();
                 }
             }
