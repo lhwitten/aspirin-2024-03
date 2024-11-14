@@ -9,6 +9,23 @@ use std::ptr;
 use std::thread;
 use std::time::Duration;
 
+unsafe fn blocking_write(port_handle: *mut SpPort, data: &[u8]) -> io::Result<usize> {
+    let mut written = 0;
+    while written < data.len() {
+        let bytes_written = sp_blocking_write(
+            port_handle,
+            data.as_ptr() as *const c_void,
+            data.len() as size_t,
+            1000,
+        );
+        if bytes_written < 0 {
+            return Err(io::Error::last_os_error());
+        }
+        written += bytes_written as usize;
+    }
+    Ok(written)
+}
+
 fn main() {
     unsafe {
         // List available serial ports
@@ -46,7 +63,7 @@ fn main() {
         let port_name = sp_get_port_name(selected_port);
         let port_name_cstr = CStr::from_ptr(port_name);
         let port_name_cstring = CString::new(port_name_cstr.to_bytes()).unwrap();
-        let port_name_str = port_name_cstr.to_string_lossy();
+        let port_name_str = port_name_cstr.to_str().expect("Should have port name");
 
         sp_free_port_list(port_list); // Free the port list as we don't need it anymore
 
@@ -66,7 +83,7 @@ fn main() {
             return;
         }
 
-        // Configure port settings (optional, may be necessary depending on default settings)
+        // Configure port settings
         sp_set_baudrate(port_handle, 115200);
         sp_set_bits(port_handle, 8);
         sp_set_parity(port_handle, SpParity::SP_PARITY_NONE);
@@ -74,59 +91,68 @@ fn main() {
         sp_set_flowcontrol(port_handle, SpFlowcontrol::SP_FLOWCONTROL_NONE);
 
         // Write "init controller" to the port
-        let init_command = b"init controller\n";
-        let bytes_written = sp_blocking_write(
-            port_handle,
-            init_command.as_ptr() as *const c_void,
-            init_command.len() as size_t,
-            1000,
-        );
-        if bytes_written < 0 {
-            eprintln!("Failed to write 'init controller' to port");
-        } else {
-            println!(
-                "Wrote '{}' to the port {}",
-                std::str::from_utf8(init_command).unwrap().trim(),
+        let init_controller = b"init controller";
+        match blocking_write(port_handle, init_controller) {
+            Ok(_) => println!(
+                "Wrote {} to the port {}",
+                std::str::from_utf8(init_controller).unwrap(),
                 port_name_str
-            );
+            ),
+            Err(e) => eprintln!(
+                "Failed to write {} to {}: {}",
+                std::str::from_utf8(init_controller).unwrap(),
+                port_name_str,
+                e
+            ),
+        }
+
+        // Write "clear all leds" to the port
+        let clear_all_leds = b"clear all leds";
+        match blocking_write(port_handle, clear_all_leds) {
+            Ok(_) => println!(
+                "Wrote {} to the port {}",
+                std::str::from_utf8(clear_all_leds).unwrap(),
+                port_name_str
+            ),
+            Err(e) => eprintln!(
+                "Failed to write {} to {}: {}",
+                std::str::from_utf8(clear_all_leds).unwrap(),
+                port_name_str,
+                e
+            ),
         }
 
         // Wait for the device to process the command
         thread::sleep(Duration::from_millis(100));
 
-        // Write "set all leds" to the port
-        let set_leds_command = b"clear all leds\n";
-        let bytes_written = sp_blocking_write(
-            port_handle,
-            set_leds_command.as_ptr() as *const c_void,
-            set_leds_command.len() as size_t,
-            1000,
-        );
-        if bytes_written < 0 {
-            eprintln!("Failed to write 'set all leds' to port");
-        } else {
-            println!(
-                "Wrote '{}' to the port {}",
-                std::str::from_utf8(set_leds_command).unwrap().trim(),
+        let start_controller = b"start controller";
+        match blocking_write(port_handle, start_controller) {
+            Ok(_) => println!(
+                "Wrote {} to the port {}",
+                std::str::from_utf8(start_controller).unwrap(),
                 port_name_str
-            );
+            ),
+            Err(e) => eprintln!(
+                "Failed to write {} to {}: {}",
+                std::str::from_utf8(start_controller).unwrap(),
+                port_name_str,
+                e
+            ),
         }
 
-        // Optionally, read any responses from the device
-        let mut buffer = [0u8; 64];
-        let bytes_read = sp_blocking_read(
-            port_handle,
-            buffer.as_mut_ptr() as *mut c_void,
-            buffer.len() as size_t,
-            1000,
-        );
-        if bytes_read > 0 {
-            let received = &buffer[..bytes_read as usize];
-            println!(
-                "Received {} bytes: {}",
-                bytes_read,
-                String::from_utf8_lossy(received)
+        loop {
+            // Optionally, read any responses from the device
+            let mut buffer = [0u8; 3];
+            buffer.fill(0);
+            let bytes_read = sp_blocking_read(
+                port_handle,
+                buffer.as_mut_ptr() as *mut c_void,
+                buffer.len(),
+                1000,
             );
+
+            let adc_value = u16::from_be_bytes([buffer[1], buffer[2]]);
+            println!("Button: {}, ADC: {}", buffer[0], adc_value);
         }
 
         // Close and free the port

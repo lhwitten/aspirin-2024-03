@@ -156,7 +156,7 @@ fn main() -> ! {
         // Debug print the current state, along with the RSG LED States
         if in_debug_mode {
             let mut debug_text: String<60> = String::new();
-            writeln!(
+            write!(
                 debug_text,
                 "st: {}, r: {}, s: {}, g: {}",
                 device_state as u32,
@@ -301,19 +301,21 @@ fn main() -> ! {
                             as u8)
                             << 7);
 
-                    writeln!(button_text, "{button_data}")
-                        .expect("GPIOs should never fail to read state");
+                    // write!(button_text, "{button_data}")
+                    //     .expect("GPIOs should never fail to read state");
 
                     // Only possible error is when USB Buffer is full, which just means
                     // that this specific message will be dropped.
-                    let _ = serial.write(button_text.as_bytes());
+                    // let _ = serial.write(button_text.as_bytes());
+                    let _ = serial.write(core::slice::from_ref(&button_data));
 
                     let pin_adc_counts: u16 = adc.read(&mut adc_pin_0).unwrap();
 
-                    writeln!(pot_text, "{pin_adc_counts}")
-                        .expect("GPIOs should never fail to read state");
+                    let adc_bytes = pin_adc_counts.to_be_bytes();
 
-                    let _ = serial.write(pot_text.as_bytes()); //TODO create pot_text
+                    // write!(pot_text, "{pin_adc_counts}")
+                    //     .expect("GPIOs should never fail to read state");
+                    let _ = serial.write(&adc_bytes); //TODO create pot_text
                     let _ = serial.flush();
                 }
             }
