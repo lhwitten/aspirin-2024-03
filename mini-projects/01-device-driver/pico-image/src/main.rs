@@ -266,10 +266,12 @@ fn main() -> ! {
                         .expect("GPIOs should never fail to read state")
                         as u8)
                         + ((se_button
+                        + ((se_button
                             .is_high()
                             .expect("GPIOs should never fail to read state")
                             as u8)
                             << 1)
+                        + ((sw_button
                         + ((sw_button
                             .is_high()
                             .expect("GPIOs should never fail to read state")
