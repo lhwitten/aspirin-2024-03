@@ -2,6 +2,7 @@ use libc::{c_char, c_int, c_uint, c_void, size_t};
 
 #[repr(i32)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[allow(non_camel_case_types)]
 pub enum SpReturn {
     SP_OK = 0,
     SP_ERR_ARG = -1,
@@ -25,6 +26,7 @@ pub struct SpPort {
 
 #[repr(C)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[allow(non_camel_case_types)]
 pub enum SpParity {
     SP_PARITY_INVALID = -1,
     SP_PARITY_NONE = 0,
@@ -36,6 +38,7 @@ pub enum SpParity {
 
 #[repr(C)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[allow(non_camel_case_types)]
 pub enum SpFlowcontrol {
     SP_FLOWCONTROL_NONE = 0,
     SP_FLOWCONTROL_XONXOFF = 1,
